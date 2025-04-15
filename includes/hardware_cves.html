@@ -1,95 +1,42 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hardware CVEs Chart</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-    }
-    .filters {
-      margin-bottom: 20px;
-    }
-  </style>
-</head>
-<body>
-  <h1>Interactive Hardware CVEs Chart</h1>
-  <div class="filters">
-    <label for="filter">Filter by:</label>
-    <select id="filter" onchange="updateChart()">
-      <option value="all">All</option>
-      <option value="companyA">Company A</option>
-      <option value="companyB">Company B</option>
-      <option value="submitterX">Submitter X</option>
-      <option value="productY">Product Y</option>
-    </select>
-  </div>
-  <canvas id="cveChart" width="800" height="400"></canvas>
+<div id="cve-container">
+  <h2>Available Hardware CVEs</h2>
+  <div id="cve-list">Loading...</div>
+  <div id="cve-details"></div>
+</div>
 
-  <script>
-    // Sample data (replace with your actual data)
-    const cveData = [
-      { company: 'Company A', submitter: 'Submitter X', product: 'Product Y', count: 10 },
-      { company: 'Company B', submitter: 'Submitter X', product: 'Product Z', count: 5 },
-      { company: 'Company A', submitter: 'Submitter Y', product: 'Product Y', count: 8 },
-      { company: 'Company B', submitter: 'Submitter Z', product: 'Product X', count: 3 },
-    ];
+<script>
+  const API_BASE = "https://ssm3375-github-io.onrender.com";
 
-    let chart;
-
-    function createChart(filteredData) {
-      const labels = filteredData.map(item => `${item.company} - ${item.product}`);
-      const data = filteredData.map(item => item.count);
-
-      const ctx = document.getElementById('cveChart').getContext('2d');
-      if (chart) {
-        chart.destroy(); // Destroy the previous chart instance
-      }
-      chart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Number of CVEs',
-            data: data,
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            borderColor: 'rgba(75, 192, 192, 1)',
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          scales: {
-            y: {
-              beginAtZero: true
-            }
-          }
-        }
+  // Load file list from Flask
+  fetch(`${API_BASE}/files`)
+    .then(res => res.json())
+    .then(files => {
+      const listDiv = document.getElementById("cve-list");
+      listDiv.innerHTML = "";  // clear "Loading..."
+      files.forEach(file => {
+        const link = document.createElement("a");
+        link.href = "#";
+        link.textContent = file;
+        link.style.display = "block";
+        link.onclick = () => loadCVE(file);
+        listDiv.appendChild(link);
       });
-    }
+    });
 
-    function updateChart() {
-      const filterValue = document.getElementById('filter').value;
-      let filteredData;
-
-      if (filterValue === 'all') {
-        filteredData = cveData;
-      } else {
-        filteredData = cveData.filter(item =>
-          item.company === filterValue ||
-          item.submitter === filterValue ||
-          item.product === filterValue
-        );
-      }
-
-      createChart(filteredData);
-    }
-
-    // Initialize the chart with all data
-    createChart(cveData);
-  </script>
-</body>
-</html>
+  // Load a single CVE file from Flask
+  function loadCVE(filename) {
+    fetch(`${API_BASE}/file/${filename}`)
+      .then(res => res.json())
+      .then(data => {
+        const details = document.getElementById("cve-details");
+        details.innerHTML = `
+          <h3>${data.cve_id}</h3>
+          <p><strong>Vendor:</strong> ${data.vendor}</p>
+          <p><strong>Product:</strong> ${data.product}</p>
+          <p><strong>Description:</strong> ${data.description}</p>
+          <h4>References</h4>
+          <ul>${data.references.map(url => `<li><a href="${url}" target="_blank">${url}</a></li>`).join("")}</ul>
+        `;
+      });
+  }
+</script>
