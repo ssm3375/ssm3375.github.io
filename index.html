@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Hardware Security Insights</title>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 0; background: #f0f0f0; }
+    header { background: #500000;  color: white; padding: 20px; text-align: center; }
+  </style>
+  <script>
+    $(function () {
+      $("#hardware").load("includes/hardware_cves.html");
+      $("#charts").load("includes/charts.html");
+      $("#about").load("includes/about.html");
+    });
+  </script>
+</head>
+<body>
+
+  <header>
+    <h1>Hardware Security Insights</h1>
+    <p>Modular dashboard for CVEs, vendors, charts, and more</p>
+  </header>
+
+  <div id="about"></div>
+  <div id="hardware"></div>
+  <div id="charts"></div>
+
+</body>
+</html>
+
