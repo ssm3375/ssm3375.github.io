@@ -101,21 +101,29 @@
     }
 
     async function applyFilters() {
-    const vendor = document.getElementById("vendor").value.toLowerCase();
-    const product = document.getElementById("product").value.toLowerCase();
-    const ref = document.getElementById("reference").value.toLowerCase();
+      const vendor = document.getElementById("vendor").value.toLowerCase();
+      const product = document.getElementById("product").value.toLowerCase();
+      const ref = document.getElementById("reference").value.toLowerCase();
 
-    const params = new URLSearchParams();
-    if (vendor) params.append("vendor", vendor);
-    if (product) params.append("product", product);
-    if (ref) params.append("domain", ref);
+      const params = new URLSearchParams();
+      if (vendor) params.append("vendor", vendor);
+      if (product) params.append("product", product);
+      if (ref) params.append("domain", ref);
 
-    const res = await fetch(`${API_BASE}/api/cves?${params.toString()}`);
-    const filtered = await res.json();
+      try {
+        const res = await fetch(`${API_BASE}/api/cves?${params.toString()}`);
+        const filtered = await res.json();
 
-    renderChart(filtered);
-    renderList(filtered);
-}
+        console.log(" Filtered CVEs:", filtered);
+        renderChart(filtered);
+        renderList(filtered);
+      } catch (error) {
+        console.error(" Error applying filters:", error);
+        document.getElementById("filtered-cve-list").innerHTML =
+          "<li>Error loading filtered results.</li>";
+      }
+    }
+
 
     function renderList(data) {
       const list = document.getElementById("filtered-cve-list");
@@ -132,7 +140,7 @@
         list.appendChild(item);
       });
     }
-    
+
     function renderChart(data) {
       const ctx = document.getElementById("cveChart").getContext("2d");
       const vendorCount = {};
