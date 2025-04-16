@@ -2,7 +2,7 @@ from flask import Flask, jsonify, send_from_directory, render_template
 import os
 import json
 
-app = Flask(__name__, template_folder=".")
+app = Flask(__name__)  # will now look in templates/
 
 JSON_DIR = "matching_cves"  # adjust if needed
 
