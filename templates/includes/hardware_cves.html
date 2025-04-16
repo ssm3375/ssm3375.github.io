@@ -28,14 +28,14 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  const API_BASE = "https://ssm3375-github-io.onrender.com";
+  const API_BASE = "";
   let allCVEs = [];
 
   function fetchAllCVEs() {
-    fetch(`${API_BASE}/files`)
+    fetch(`/api/files`)
       .then(res => res.json())
       .then(files => {
-        Promise.all(files.map(f => fetch(`${API_BASE}/file/${f}`).then(r => r.json())))
+        Promise.all(files.map(f => fetch(`/api/file/${f}`).then(r => r.json())))
           .then(data => {
             allCVEs = data;
             populateDropdowns();
