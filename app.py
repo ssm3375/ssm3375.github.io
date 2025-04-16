@@ -76,6 +76,9 @@ def load_and_index_cves():
         except Exception as e:
             print(f"⚠️ Error processing {file}: {e}")
 
+    print(f"✅ Loaded {len(cve_data)} CVEs from {JSON_DIR}")
+
+
 # Preload data on server start
 load_and_index_cves()
 
