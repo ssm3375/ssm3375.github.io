@@ -1,42 +1,109 @@
-<div id="cve-container">
-  <h2>Available Hardware CVEs</h2>
-  <div id="cve-list">Loading...</div>
-  <div id="cve-details"></div>
+<!-- Add Bootstrap & Chart.js -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="container mt-4" id="cve-container">
+  <div class="card shadow">
+    <div class="card-header bg-primary text-white">
+      <h3 class="mb-0">Available Hardware CVEs</h3>
+    </div>
+    <div class="card-body row">
+      <div class="col-md-4 border-end">
+        <div class="list-group" id="cve-list">Loading...</div>
+      </div>
+      <div class="col-md-8">
+        <div id="cve-details" class="p-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow mt-5">
+    <div class="card-header bg-secondary text-white">
+      <h5 class="mb-0">Vendor CVE Distribution (Example)</h5>
+    </div>
+    <div class="card-body">
+      <canvas id="vendorChart"></canvas>
+    </div>
+  </div>
 </div>
 
 <script>
   const API_BASE = "https://ssm3375-github-io.onrender.com";
 
-  // Load file list from Flask
+  // Load CVE file list
   fetch(`${API_BASE}/files`)
     .then(res => res.json())
     .then(files => {
       const listDiv = document.getElementById("cve-list");
-      listDiv.innerHTML = "";  // clear "Loading..."
+      listDiv.innerHTML = ""; // clear loading text
+
       files.forEach(file => {
         const link = document.createElement("a");
         link.href = "#";
         link.textContent = file;
-        link.style.display = "block";
+        link.className = "list-group-item list-group-item-action";
         link.onclick = () => loadCVE(file);
         listDiv.appendChild(link);
       });
     });
 
-  // Load a single CVE file from Flask
+  // Load a single CVE's details
   function loadCVE(filename) {
     fetch(`${API_BASE}/file/${filename}`)
       .then(res => res.json())
       .then(data => {
         const details = document.getElementById("cve-details");
         details.innerHTML = `
-          <h3>${data.cve_id}</h3>
-          <p><strong>Vendor:</strong> ${data.vendor}</p>
-          <p><strong>Product:</strong> ${data.product}</p>
-          <p><strong>Description:</strong> ${data.description}</p>
-          <h4>References</h4>
-          <ul>${data.references.map(url => `<li><a href="${url}" target="_blank">${url}</a></li>`).join("")}</ul>
+          <div class="card">
+            <div class="card-body">
+              <h4 class="card-title">${data.cve_id}</h4>
+              <p class="card-text"><strong>Vendor:</strong> ${data.vendor}</p>
+              <p class="card-text"><strong>Product:</strong> ${data.product}</p>
+              <p class="card-text"><strong>Description:</strong> ${data.description}</p>
+              <h5>References</h5>
+              <ul class="list-group">
+                ${data.references.map(url => `<li class="list-group-item"><a href="${url}" target="_blank">${url}</a></li>`).join("")}
+              </ul>
+            </div>
+          </div>
         `;
       });
   }
+
+  // Example: Hardcoded chart data (replace with real data if available)
+  const ctx = document.getElementById('vendorChart').getContext('2d');
+  const chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Intel', 'AMD', 'ARM', 'Qualcomm', 'NVIDIA'],
+      datasets: [{
+        label: 'Number of CVEs',
+        data: [12, 7, 4, 3, 2], // Replace with actual vendor counts
+        backgroundColor: [
+          '#007bff',
+          '#28a745',
+          '#ffc107',
+          '#17a2b8',
+          '#dc3545'
+        ]
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        title: {
+          display: false
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1
+          }
+        }
+      }
+    }
+  });
 </script>
