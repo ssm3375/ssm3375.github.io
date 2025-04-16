@@ -3,6 +3,7 @@ import os
 import json
 
 app = Flask(__name__, template_folder=".")
+
 JSON_DIR = "matching_cves"  # adjust if needed
 
 @app.route("/")
@@ -37,6 +38,11 @@ def get_file(filename):
     }
 
     return jsonify(parsed)
+
+# ✅ Add this route so includes/*.html works
+@app.route("/includes/<name>")
+def include_html(name):
+    return render_template(f"includes/{name}")
 
 if __name__ == "__main__":
     app.run(debug=True)
