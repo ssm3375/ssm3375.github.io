@@ -76,9 +76,9 @@
       allCVEs.forEach(cve => {
         if (cve.vendor) vendorSet.add(cve.vendor);
         if (cve.product) productSet.add(cve.product);
-        (cve.references || []).forEach(url => {
+        (cve.references || []).forEach(refObj => {
           try {
-            const domain = new URL(url).hostname;
+            const domain = new URL(refObj.url).hostname;
             domainSet.add(domain);
           } catch {}
         });
@@ -87,7 +87,8 @@
       updateSelect("vendor", vendorSet);
       updateSelect("product", productSet);
       updateSelect("reference", domainSet);
-    }
+}
+
 
     function updateSelect(id, values) {
       const select = document.getElementById(id);
