@@ -8,7 +8,7 @@ from flask_cors import CORS
 app = Flask(__name__, template_folder="templates")
 CORS(app)
 
-JSON_DIR = "hardware_cves"
+JSON_DIR = "hardware_cves"  # Make sure this directory exists and contains JSON files
 
 # Global in-memory storage
 cve_data = []
@@ -18,6 +18,12 @@ domain_to_cves = defaultdict(list)
 provider_to_cves = defaultdict(list)
 
 def load_and_index_cves():
+    if not os.path.exists(JSON_DIR):
+        print(f"❌ ERROR: JSON directory '{JSON_DIR}' not found. Please ensure it exists.")
+        return
+
+    print(f"📂 Loading CVEs from '{JSON_DIR}'...")
+
     for file in os.listdir(JSON_DIR):
         if not file.endswith(".json"):
             continue
@@ -35,7 +41,6 @@ def load_and_index_cves():
             description = cna.get("descriptions", [{}])[0].get("value", "No description")
             references = cna.get("references", [])
 
-            # Reference domains
             reference_domains = []
             for ref in references:
                 url = ref.get("url")
@@ -47,7 +52,6 @@ def load_and_index_cves():
 
             assigner = data.get("cveMetadata", {}).get("assignerShortName", "n/a").lower()
 
-            # Providers
             providers = set()
             for container in data.get("containers", {}).values():
                 if isinstance(container, dict):
@@ -77,13 +81,15 @@ def load_and_index_cves():
                 "providers": list(providers)
             })
 
+            print(f"✅ Loaded {cve_id} | Vendor: {vendor} | Product: {product} | Domains: {reference_domains}")
+
         except Exception as e:
             print(f"⚠️ Error reading {file}: {e}")
 
-    print(f"✅ Loaded {len(cve_data)} CVEs from {JSON_DIR}")
+    print(f"\n✅ Total CVEs Loaded: {len(cve_data)}")
 
 
-# Load data
+# Load data on start
 load_and_index_cves()
 
 
@@ -94,22 +100,24 @@ def index():
 
 @app.route("/api/cves")
 def get_filtered_cves():
-    vendor = request.args.get("vendor", "").lower().strip()
-    product = request.args.get("product", "").lower().strip()
-    domain = request.args.get("domain", "").lower().strip()
+    vendor = request.args.get("vendor", "").lower()
+    product = request.args.get("product", "").lower()
+    domain = request.args.get("domain", "").lower()
+
+    print(f"🔍 Filtering for: vendor={vendor}, product={product}, domain={domain}")
 
     filtered = []
-
     for entry in cve_data:
-        if vendor and vendor != entry["vendor"]:
+        print(f"→ Entry: vendor={entry['vendor']}, product={entry['product']}, domains={entry['reference_domains']}")
+        if vendor and vendor not in entry["vendor"]:
             continue
-        if product and product != entry["product"]:
+        if product and product not in entry["product"]:
             continue
-        if domain and domain not in entry["reference_domains"]:
+        if domain and not any(domain in d for d in entry["reference_domains"]):
             continue
         filtered.append(entry)
 
-    print(f"[DEBUG] Filter request: vendor={vendor}, product={product}, domain={domain} -> {len(filtered)} CVEs")
+    print(f"✅ Matched {len(filtered)} CVEs")
     return jsonify(filtered)
 
 
