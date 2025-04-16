@@ -56,18 +56,22 @@
   </div>
 
   <script>
-    //const API_BASE = "https://ssm3375-github-io.onrender.com";
     const API_BASE = "";
 
     let allCVEs = [];
 
     async function fetchAllCVEs() {
-      const res = await fetch(`${API_BASE}/api/cves`);
-      const data = await res.json();
-      allCVEs = data;
-      populateDropdowns();
-      renderChart(data);
-      renderList(data);
+      try {
+        const res = await fetch(`${API_BASE}/api/cves`);
+        const data = await res.json();
+        allCVEs = data;
+        populateDropdowns();
+        renderChart(data);
+        renderList(data);
+      } catch (e) {
+        console.error("Error loading initial data", e);
+        document.getElementById("filtered-cve-list").innerHTML = "<li>Error loading data.</li>";
+      }
     }
 
     function populateDropdowns() {
@@ -78,19 +82,15 @@
       allCVEs.forEach(cve => {
         if (cve.vendor) vendorSet.add(cve.vendor);
         if (cve.product) productSet.add(cve.product);
-        (cve.references || []).forEach(refObj => {
-          try {
-            const domain = new URL(refObj.url).hostname;
-            domainSet.add(domain);
-          } catch {}
+        (cve.reference_domains || []).forEach(domain => {
+          domainSet.add(domain);
         });
       });
 
       updateSelect("vendor", vendorSet);
       updateSelect("product", productSet);
       updateSelect("reference", domainSet);
-}
-
+    }
 
     function updateSelect(id, values) {
       const select = document.getElementById(id);
@@ -106,24 +106,23 @@
       const ref = document.getElementById("reference").value.toLowerCase();
 
       const params = new URLSearchParams();
-      if (vendor) params.append("vendor", vendor);
-      if (product) params.append("product", product);
-      if (ref) params.append("domain", ref);
+      if (vendor && vendor !== "all") params.append("vendor", vendor);
+      if (product && product !== "all") params.append("product", product);
+      if (ref && ref !== "all") params.append("domain", ref);
 
       try {
+        console.log("🔍 Filtering with:", params.toString());
         const res = await fetch(`${API_BASE}/api/cves?${params.toString()}`);
         const filtered = await res.json();
-
-        console.log(" Filtered CVEs:", filtered);
+        console.log("✅ Filtered results:", filtered);
         renderChart(filtered);
         renderList(filtered);
       } catch (error) {
-        console.error(" Error applying filters:", error);
+        console.error("❌ Error applying filters:", error);
         document.getElementById("filtered-cve-list").innerHTML =
           "<li>Error loading filtered results.</li>";
       }
     }
-
 
     function renderList(data) {
       const list = document.getElementById("filtered-cve-list");
