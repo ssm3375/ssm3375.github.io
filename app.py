@@ -3,6 +3,8 @@ import os
 import json
 from collections import defaultdict, Counter
 from urllib.parse import urlparse
+from flask_cors import CORS
+
 
 app = Flask(__name__, template_folder="templates")
 CORS(app)  
