@@ -1,13 +1,13 @@
 <div id="cve-filter" style="padding: 1em; background-color: #f8f8f8; border-radius: 10px;">
   <h2>🔍 Filter Hardware CVEs</h2>
   <label for="vendor">Vendor:</label>
-  <input type="text" id="vendor" placeholder="e.g., Intel">
+  <select id="vendor"><option value="">All</option></select>
 
   <label for="product">Product:</label>
-  <input type="text" id="product" placeholder="e.g., Xeon">
+  <select id="product"><option value="">All</option></select>
 
   <label for="reference">Reference Domain:</label>
-  <input type="text" id="reference" placeholder="e.g., intel.com">
+  <select id="reference"><option value="">All</option></select>
 
   <button onclick="applyFilters()">Apply Filters</button>
 </div>
@@ -38,10 +38,38 @@
         Promise.all(files.map(f => fetch(`${API_BASE}/file/${f}`).then(r => r.json())))
           .then(data => {
             allCVEs = data;
+            populateDropdowns();
             renderChart();
             renderList(data);
           });
       });
+  }
+
+  function populateDropdowns() {
+    const vendors = new Set();
+    const products = new Set();
+    const domains = new Set();
+
+    allCVEs.forEach(cve => {
+      if (cve.vendor) vendors.add(cve.vendor);
+      if (cve.product) products.add(cve.product);
+      if (cve.references) {
+        cve.references.forEach(url => {
+          try {
+            const domain = new URL(url).hostname;
+            domains.add(domain);
+          } catch {}
+        });
+      }
+    });
+
+    const vendorSelect = document.getElementById("vendor");
+    const productSelect = document.getElementById("product");
+    const referenceSelect = document.getElementById("reference");
+
+    vendors.forEach(v => vendorSelect.innerHTML += `<option value="${v}">${v}</option>`);
+    products.forEach(p => productSelect.innerHTML += `<option value="${p}">${p}</option>`);
+    domains.forEach(d => referenceSelect.innerHTML += `<option value="${d}">${d}</option>`);
   }
 
   function applyFilters() {
@@ -50,9 +78,9 @@
     const ref = document.getElementById("reference").value.toLowerCase();
 
     const filtered = allCVEs.filter(cve =>
-      (!vendor || cve.vendor?.toLowerCase().includes(vendor)) &&
-      (!product || cve.product?.toLowerCase().includes(product)) &&
-      (!ref || cve.references.some(url => new URL(url).hostname.includes(ref)))
+      (!vendor || (cve.vendor && cve.vendor.toLowerCase() === vendor)) &&
+      (!product || (cve.product && cve.product.toLowerCase() === product)) &&
+      (!ref || cve.references.some(url => new URL(url).hostname.toLowerCase() === ref))
     );
 
     renderList(filtered);
@@ -97,9 +125,7 @@
       data: chartData,
       options: {
         responsive: true,
-        plugins: {
-          legend: { display: false }
-        },
+        plugins: { legend: { display: false } },
         scales: {
           x: { title: { display: true, text: "Vendor" } },
           y: { title: { display: true, text: "# of CVEs" }, beginAtZero: true }
