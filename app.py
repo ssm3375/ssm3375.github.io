@@ -5,6 +5,8 @@ from collections import defaultdict, Counter
 from urllib.parse import urlparse
 
 app = Flask(__name__, template_folder="templates")
+CORS(app)  
+
 
 JSON_DIR = "hardware_cves"
 
