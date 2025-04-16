@@ -1,109 +1,108 @@
-<!-- Add Bootstrap & Chart.js -->
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<div id="cve-filter">
+  <h2>Filter Hardware CVEs</h2>
+  <label for="vendor">Vendor:</label>
+  <input type="text" id="vendor" placeholder="e.g., Intel">
 
-<div class="container mt-4" id="cve-container">
-  <div class="card shadow">
-    <div class="card-header bg-primary text-white">
-      <h3 class="mb-0">Available Hardware CVEs</h3>
-    </div>
-    <div class="card-body row">
-      <div class="col-md-4 border-end">
-        <div class="list-group" id="cve-list">Loading...</div>
-      </div>
-      <div class="col-md-8">
-        <div id="cve-details" class="p-2"></div>
-      </div>
-    </div>
-  </div>
+  <label for="product">Product:</label>
+  <input type="text" id="product" placeholder="e.g., Xeon">
 
-  <div class="card shadow mt-5">
-    <div class="card-header bg-secondary text-white">
-      <h5 class="mb-0">Vendor CVE Distribution (Example)</h5>
-    </div>
-    <div class="card-body">
-      <canvas id="vendorChart"></canvas>
-    </div>
-  </div>
+  <label for="reference">Reference Domain:</label>
+  <input type="text" id="reference" placeholder="e.g., intel.com">
+
+  <button onclick="applyFilters()">Apply Filters</button>
 </div>
 
+<hr>
+
+<div id="cve-chart-container">
+  <h3>CVEs by Vendor</h3>
+  <canvas id="cveChart"></canvas>
+</div>
+
+<hr>
+
+<div id="filtered-cves">
+  <h3>Filtered CVEs</h3>
+  <ul id="filtered-cve-list">Loading...</ul>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
   const API_BASE = "https://ssm3375-github-io.onrender.com";
+  let allCVEs = [];
 
-  // Load CVE file list
-  fetch(`${API_BASE}/files`)
-    .then(res => res.json())
-    .then(files => {
-      const listDiv = document.getElementById("cve-list");
-      listDiv.innerHTML = ""; // clear loading text
-
-      files.forEach(file => {
-        const link = document.createElement("a");
-        link.href = "#";
-        link.textContent = file;
-        link.className = "list-group-item list-group-item-action";
-        link.onclick = () => loadCVE(file);
-        listDiv.appendChild(link);
-      });
-    });
-
-  // Load a single CVE's details
-  function loadCVE(filename) {
-    fetch(`${API_BASE}/file/${filename}`)
+  function fetchAllCVEs() {
+    fetch(`${API_BASE}/files`)
       .then(res => res.json())
-      .then(data => {
-        const details = document.getElementById("cve-details");
-        details.innerHTML = `
-          <div class="card">
-            <div class="card-body">
-              <h4 class="card-title">${data.cve_id}</h4>
-              <p class="card-text"><strong>Vendor:</strong> ${data.vendor}</p>
-              <p class="card-text"><strong>Product:</strong> ${data.product}</p>
-              <p class="card-text"><strong>Description:</strong> ${data.description}</p>
-              <h5>References</h5>
-              <ul class="list-group">
-                ${data.references.map(url => `<li class="list-group-item"><a href="${url}" target="_blank">${url}</a></li>`).join("")}
-              </ul>
-            </div>
-          </div>
-        `;
+      .then(files => {
+        Promise.all(files.map(f => fetch(`${API_BASE}/file/${f}`).then(r => r.json())))
+          .then(data => {
+            allCVEs = data;
+            renderChart();
+            renderList(data);
+          });
       });
   }
 
-  // Example: Hardcoded chart data (replace with real data if available)
-  const ctx = document.getElementById('vendorChart').getContext('2d');
-  const chart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: ['Intel', 'AMD', 'ARM', 'Qualcomm', 'NVIDIA'],
+  function applyFilters() {
+    const vendor = document.getElementById("vendor").value.toLowerCase();
+    const product = document.getElementById("product").value.toLowerCase();
+    const ref = document.getElementById("reference").value.toLowerCase();
+
+    const filtered = allCVEs.filter(cve =>
+      (!vendor || cve.vendor?.toLowerCase().includes(vendor)) &&
+      (!product || cve.product?.toLowerCase().includes(product)) &&
+      (!ref || cve.references.some(url => new URL(url).hostname.includes(ref)))
+    );
+
+    renderList(filtered);
+    renderChart(filtered);
+  }
+
+  function renderList(data) {
+    const list = document.getElementById("filtered-cve-list");
+    list.innerHTML = "";
+    data.forEach(cve => {
+      const item = document.createElement("li");
+      item.innerHTML = `<strong>${cve.cve_id}</strong>: ${cve.description} <br><em>${cve.vendor} - ${cve.product}</em>`;
+      list.appendChild(item);
+    });
+  }
+
+  function renderChart(data = allCVEs) {
+    const ctx = document.getElementById("cveChart").getContext("2d");
+    const vendorCount = {};
+
+    data.forEach(cve => {
+      const v = cve.vendor || "Unknown";
+      vendorCount[v] = (vendorCount[v] || 0) + 1;
+    });
+
+    const chartData = {
+      labels: Object.keys(vendorCount),
       datasets: [{
-        label: 'Number of CVEs',
-        data: [12, 7, 4, 3, 2], // Replace with actual vendor counts
-        backgroundColor: [
-          '#007bff',
-          '#28a745',
-          '#ffc107',
-          '#17a2b8',
-          '#dc3545'
-        ]
+        label: "# of CVEs",
+        data: Object.values(vendorCount),
+        backgroundColor: "rgba(128, 0, 0, 0.7)",
       }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { display: false },
-        title: {
-          display: false
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            stepSize: 1
-          }
+    };
+
+    if (window.cveChart) window.cveChart.destroy(); // avoid duplicates
+    window.cveChart = new Chart(ctx, {
+      type: "bar",
+      data: chartData,
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: { title: { display: true, text: "Vendor" } },
+          y: { title: { display: true, text: "# of CVEs" }, beginAtZero: true }
         }
       }
-    }
-  });
+    });
+  }
+
+  fetchAllCVEs();
 </script>
