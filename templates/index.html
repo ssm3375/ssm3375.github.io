@@ -60,9 +60,8 @@
     let allCVEs = [];
 
     async function fetchAllCVEs() {
-      const res = await fetch(`${API_BASE}/files`);
-      const files = await res.json();
-      const data = await Promise.all(files.map(f => fetch(`${API_BASE}/file/${f}`).then(r => r.json())));
+      const res = await fetch(`${API_BASE}/api/cves`);
+      const data = await res.json();
       allCVEs = data;
       populateDropdowns();
       renderChart(data);
