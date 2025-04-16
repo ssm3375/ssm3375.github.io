@@ -5,10 +5,8 @@ from collections import defaultdict, Counter
 from urllib.parse import urlparse
 from flask_cors import CORS
 
-
 app = Flask(__name__, template_folder="templates")
-CORS(app)  
-
+CORS(app)
 
 JSON_DIR = "hardware_cves"
 
@@ -81,7 +79,6 @@ def load_and_index_cves():
             print(f"⚠️ Error processing {file}: {e}")
 
     print(f"✅ Loaded {len(cve_data)} CVEs from {JSON_DIR}")
-
 
 # Preload data on server start
 load_and_index_cves()
