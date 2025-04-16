@@ -117,23 +117,22 @@
     renderList(filtered);
 }
 
-  function renderList(data) {
-    const list = document.getElementById("filtered-cve-list");
-    list.innerHTML = "<li>Loading...</li>";  // quick visual
-    setTimeout(() => {
-      list.innerHTML = "";  // clear it shortly after for the actual data
-      if (data.length === 0) {
+    function renderList(data) {
+      const list = document.getElementById("filtered-cve-list");
+      list.innerHTML = "";
+
+      if (!data || data.length === 0) {
         list.innerHTML = "<li>No CVEs match your filter.</li>";
         return;
       }
+
       data.forEach(cve => {
         const item = document.createElement("li");
         item.innerHTML = `<strong>${cve.cve_id}</strong>: ${cve.description}<br><em>${cve.vendor || "n/a"} — ${cve.product || "n/a"}</em>`;
         list.appendChild(item);
       });
-    }, 100);  // allows rendering to tick
-  }
-
+    }
+    
     function renderChart(data) {
       const ctx = document.getElementById("cveChart").getContext("2d");
       const vendorCount = {};
