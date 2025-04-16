@@ -4,7 +4,7 @@ import json
 
 app = Flask(__name__)  # will now look in templates/
 
-JSON_DIR = "matching_cves"  # adjust if needed
+JSON_DIR = "hardware_cves"  # adjust if needed
 
 @app.route("/")
 def index():
