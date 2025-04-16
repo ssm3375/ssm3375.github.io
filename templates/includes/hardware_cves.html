@@ -1,5 +1,5 @@
-<div id="cve-filter">
-  <h2>Filter Hardware CVEs</h2>
+<div id="cve-filter" style="padding: 1em; background-color: #f8f8f8; border-radius: 10px;">
+  <h2>🔍 Filter Hardware CVEs</h2>
   <label for="vendor">Vendor:</label>
   <input type="text" id="vendor" placeholder="e.g., Intel">
 
@@ -15,14 +15,14 @@
 <hr>
 
 <div id="cve-chart-container">
-  <h3>CVEs by Vendor</h3>
-  <canvas id="cveChart"></canvas>
+  <h3>📊 CVEs by Vendor</h3>
+  <canvas id="cveChart" style="max-height: 500px;"></canvas>
 </div>
 
 <hr>
 
 <div id="filtered-cves">
-  <h3>Filtered CVEs</h3>
+  <h3>🧾 Filtered CVEs</h3>
   <ul id="filtered-cve-list">Loading...</ul>
 </div>
 
@@ -62,9 +62,13 @@
   function renderList(data) {
     const list = document.getElementById("filtered-cve-list");
     list.innerHTML = "";
+    if (data.length === 0) {
+      list.innerHTML = "<li>No results found.</li>";
+      return;
+    }
     data.forEach(cve => {
       const item = document.createElement("li");
-      item.innerHTML = `<strong>${cve.cve_id}</strong>: ${cve.description} <br><em>${cve.vendor} - ${cve.product}</em>`;
+      item.innerHTML = `<strong>${cve.cve_id}</strong>: ${cve.description} <br><em>${cve.vendor || 'n/a'} - ${cve.product || 'n/a'}</em>`;
       list.appendChild(item);
     });
   }
@@ -87,7 +91,7 @@
       }]
     };
 
-    if (window.cveChart) window.cveChart.destroy(); // avoid duplicates
+    if (window.cveChart) window.cveChart.destroy();
     window.cveChart = new Chart(ctx, {
       type: "bar",
       data: chartData,
