@@ -102,15 +102,17 @@
       const product = document.getElementById("product").value.toLowerCase();
       const ref = document.getElementById("reference").value.toLowerCase();
 
+
       const filtered = allCVEs.filter(cve =>
         (!vendor || (cve.vendor || "").toLowerCase() === vendor) &&
         (!product || (cve.product || "").toLowerCase() === product) &&
-        (!ref || (cve.references || []).some(url => {
+        (!ref || (cve.references || []).some(refObj => {
           try {
-            return new URL(url).hostname.toLowerCase() === ref;
+            return new URL(refObj.url).hostname.toLowerCase() === ref;
           } catch { return false; }
         }))
       );
+
 
       renderChart(filtered);
       renderList(filtered);
