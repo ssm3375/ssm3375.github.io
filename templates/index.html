@@ -4,16 +4,14 @@
   <meta charset="UTF-8">
   <title>Hardware Security Insights</title>
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { font-family: sans-serif; margin: 0; background: #f0f0f0; }
     header { background: #500000;  color: white; padding: 20px; text-align: center; }
+    .container { padding: 20px; }
+    select, button { margin: 5px; padding: 4px; }
+    h2, h3 { color: #333; }
   </style>
-  <script>
-    $(function () {
-      $("#hardware").load("includes/hardware_cves.html");
-      $("#about").load("includes/about.html");
-    });
-  </script>
 </head>
 <body>
 
@@ -22,56 +20,82 @@
     <p>Modular dashboard for CVEs, vendors, charts, and more</p>
   </header>
 
-  <div id="about"></div>
-  <div id="hardware"></div>
-  <div id="charts"></div>
+  <div class="container">
+    <h2>About Us</h2>
+    <p>
+      Since hardware vulnerabilities are relatively newer and lack the mature support and response ecosystem
+      that exists for software vulnerabilities, we created this page to track and analyze all known hardware-related CVEs.
+      This resource helps identify who submitted each vulnerability, what sources were cited, and how these issues are
+      being documented across the ecosystem. By aggregating this data, our goal is to provide greater visibility into
+      hardware threat reporting and support a more transparent security response.
+    </p>
 
-  
-  <!-- 🧠 Move your chart/filter script here -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <hr>
+
+    <h2>🔍 Filter Hardware CVEs</h2>
+    <label for="vendor">Vendor:</label>
+    <select id="vendor"><option value="">All</option></select>
+
+    <label for="product">Product:</label>
+    <select id="product"><option value="">All</option></select>
+
+    <label for="reference">Reference Domain:</label>
+    <select id="reference"><option value="">All</option></select>
+
+    <button onclick="applyFilters()">Apply Filters</button>
+
+    <hr>
+
+    <h3>📊 CVEs by Vendor</h3>
+    <canvas id="cveChart" style="max-height: 400px;"></canvas>
+
+    <hr>
+
+    <h3>🧾 Filtered CVEs</h3>
+    <ul id="filtered-cve-list">Loading...</ul>
+  </div>
+
   <script>
     const API_BASE = "https://ssm3375-github-io.onrender.com";
     let allCVEs = [];
 
-    function fetchAllCVEs() {
-      fetch(`${API_BASE}/files`)
-        .then(res => res.json())
-        .then(files => {
-          return Promise.all(files.map(f => fetch(`${API_BASE}/file/${f}`).then(r => r.json())));
-        })
-        .then(data => {
-          allCVEs = data;
-          populateDropdowns();
-          renderChart();
-          renderList(data);
-        });
+    async function fetchAllCVEs() {
+      const res = await fetch(`${API_BASE}/files`);
+      const files = await res.json();
+      const data = await Promise.all(files.map(f => fetch(`${API_BASE}/file/${f}`).then(r => r.json())));
+      allCVEs = data;
+      populateDropdowns();
+      renderChart(data);
+      renderList(data);
     }
 
     function populateDropdowns() {
-      const vendors = new Set();
-      const products = new Set();
-      const domains = new Set();
+      const vendorSet = new Set();
+      const productSet = new Set();
+      const domainSet = new Set();
 
       allCVEs.forEach(cve => {
-        if (cve.vendor) vendors.add(cve.vendor);
-        if (cve.product) products.add(cve.product);
+        if (cve.vendor) vendorSet.add(cve.vendor);
+        if (cve.product) productSet.add(cve.product);
         (cve.references || []).forEach(url => {
           try {
             const domain = new URL(url).hostname;
-            domains.add(domain);
+            domainSet.add(domain);
           } catch {}
         });
       });
 
-      populateSelect("vendor", vendors);
-      populateSelect("product", products);
-      populateSelect("reference", domains);
+      updateSelect("vendor", vendorSet);
+      updateSelect("product", productSet);
+      updateSelect("reference", domainSet);
     }
 
-    function populateSelect(id, values) {
-      const el = document.getElementById(id);
-      el.innerHTML = `<option value="">All</option>`;
-      [...values].sort().forEach(v => el.innerHTML += `<option value="${v}">${v}</option>`);
+    function updateSelect(id, values) {
+      const select = document.getElementById(id);
+      select.innerHTML = `<option value="">All</option>`;
+      [...values].sort().forEach(v => {
+        select.innerHTML += `<option value="${v}">${v}</option>`;
+      });
     }
 
     function applyFilters() {
@@ -89,21 +113,26 @@
         }))
       );
 
-      renderList(filtered);
       renderChart(filtered);
+      renderList(filtered);
     }
 
     function renderList(data) {
       const list = document.getElementById("filtered-cve-list");
-      list.innerHTML = data.length === 0 ? "<li>No results found.</li>" : "";
+      list.innerHTML = "";
+      if (data.length === 0) {
+        list.innerHTML = "<li>No CVEs match your filter.</li>";
+        return;
+      }
+
       data.forEach(cve => {
         const item = document.createElement("li");
-        item.innerHTML = `<strong>${cve.cve_id}</strong>: ${cve.description} <br><em>${cve.vendor || 'n/a'} - ${cve.product || 'n/a'}</em>`;
+        item.innerHTML = `<strong>${cve.cve_id}</strong>: ${cve.description}<br><em>${cve.vendor || "n/a"} — ${cve.product || "n/a"}</em>`;
         list.appendChild(item);
       });
     }
 
-    function renderChart(data = allCVEs) {
+    function renderChart(data) {
       const ctx = document.getElementById("cveChart").getContext("2d");
       const vendorCount = {};
       data.forEach(cve => {
@@ -111,23 +140,25 @@
         vendorCount[v] = (vendorCount[v] || 0) + 1;
       });
 
+      const chartData = {
+        labels: Object.keys(vendorCount),
+        datasets: [{
+          label: "# of CVEs",
+          data: Object.values(vendorCount),
+          backgroundColor: "rgba(80, 0, 0, 0.7)"
+        }]
+      };
+
       if (window.cveChart) window.cveChart.destroy();
       window.cveChart = new Chart(ctx, {
         type: "bar",
-        data: {
-          labels: Object.keys(vendorCount),
-          datasets: [{
-            label: "# of CVEs",
-            data: Object.values(vendorCount),
-            backgroundColor: "rgba(128, 0, 0, 0.7)"
-          }]
-        },
+        data: chartData,
         options: {
           responsive: true,
           plugins: { legend: { display: false } },
           scales: {
             x: { title: { display: true, text: "Vendor" } },
-            y: { title: { display: true, text: "# of CVEs" }, beginAtZero: true }
+            y: { beginAtZero: true, title: { display: true, text: "# of CVEs" } }
           }
         }
       });
@@ -137,5 +168,3 @@
   </script>
 </body>
 </html>
-
-
