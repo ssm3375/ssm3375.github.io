@@ -97,41 +97,39 @@
       });
     }
 
-    function applyFilters() {
-      const vendor = document.getElementById("vendor").value.toLowerCase();
-      const product = document.getElementById("product").value.toLowerCase();
-      const ref = document.getElementById("reference").value.toLowerCase();
+    async function applyFilters() {
+    const vendor = document.getElementById("vendor").value.toLowerCase();
+    const product = document.getElementById("product").value.toLowerCase();
+    const ref = document.getElementById("reference").value.toLowerCase();
 
+    const params = new URLSearchParams();
+    if (vendor) params.append("vendor", vendor);
+    if (product) params.append("product", product);
+    if (ref) params.append("domain", ref);
 
-      const filtered = allCVEs.filter(cve =>
-        (!vendor || (cve.vendor || "").toLowerCase() === vendor) &&
-        (!product || (cve.product || "").toLowerCase() === product) &&
-        (!ref || (cve.references || []).some(refObj => {
-          try {
-            return new URL(refObj.url).hostname.toLowerCase() === ref;
-          } catch { return false; }
-        }))
-      );
+    const res = await fetch(`${API_BASE}/api/cves?${params.toString()}`);
+    const filtered = await res.json();
 
+    renderChart(filtered);
+    renderList(filtered);
+}
 
-      renderChart(filtered);
-      renderList(filtered);
-    }
-
-    function renderList(data) {
-      const list = document.getElementById("filtered-cve-list");
-      list.innerHTML = "";
+  function renderList(data) {
+    const list = document.getElementById("filtered-cve-list");
+    list.innerHTML = "<li>Loading...</li>";  // quick visual
+    setTimeout(() => {
+      list.innerHTML = "";  // clear it shortly after for the actual data
       if (data.length === 0) {
         list.innerHTML = "<li>No CVEs match your filter.</li>";
         return;
       }
-
       data.forEach(cve => {
         const item = document.createElement("li");
         item.innerHTML = `<strong>${cve.cve_id}</strong>: ${cve.description}<br><em>${cve.vendor || "n/a"} — ${cve.product || "n/a"}</em>`;
         list.appendChild(item);
       });
-    }
+    }, 100);  // allows rendering to tick
+  }
 
     function renderChart(data) {
       const ctx = document.getElementById("cveChart").getContext("2d");
