@@ -5,6 +5,7 @@ from collections import defaultdict, Counter
 from urllib.parse import urlparse
 from flask_cors import CORS
 from datetime import datetime
+import itertools
 
 app = Flask(__name__)
 CORS(app)
@@ -18,6 +19,11 @@ submitter_counter = Counter()
 domain_to_cves = defaultdict(list)
 provider_to_cves = defaultdict(list)
 date_distribution = Counter()
+vendor_year_heatmap = defaultdict(lambda: defaultdict(int))
+domain_year_heatmap = defaultdict(lambda: defaultdict(int))
+submitter_year_heatmap = defaultdict(lambda: defaultdict(int))
+cooccurrence_counter = Counter()
+vuln_type_counter = Counter()
 
 def load_and_index_cves():
     if not os.path.exists(JSON_DIR):
@@ -42,6 +48,7 @@ def load_and_index_cves():
             product = affected.get("product", "n/a").lower()
             description = cna.get("descriptions", [{}])[0].get("value", "No description")
             references = cna.get("references", [])
+            problem_types = cna.get("problemTypes", [])
 
             reference_domains = []
             for ref in references:
@@ -78,10 +85,26 @@ def load_and_index_cves():
             if date_str:
                 try:
                     date_obj = datetime.fromisoformat(date_str.replace("Z", ""))
-                    date_key = date_obj.strftime("%Y-%m")
+                    date_key = date_obj.strftime("%Y")
                     date_distribution[date_key] += 1
+                    vendor_year_heatmap[vendor][date_key] += 1
+                    for domain in reference_domains:
+                        domain_year_heatmap[domain][date_key] += 1
+                    submitter_year_heatmap[assigner][date_key] += 1
                 except Exception as e:
                     print(f"⚠️ Failed to parse date for {cve_id}: {e}")
+
+            # Keyword co-occurrence
+            words = [w.lower() for w in description.split() if len(w) > 3]
+            for pair in itertools.combinations(set(words), 2):
+                cooccurrence_counter[tuple(sorted(pair))] += 1
+
+            # Vulnerability types
+            for pt in problem_types:
+                for desc in pt.get("descriptions", []):
+                    d = desc.get("description", "").lower()
+                    if d:
+                        vuln_type_counter[d] += 1
 
             cve_data.append({
                 "cve_id": cve_id,
@@ -104,69 +127,27 @@ def load_and_index_cves():
 
 load_and_index_cves()
 
-# ----------------------------------------
-# API ROUTES
-# ----------------------------------------
+# ------------------ API ------------------
 
-@app.route("/api/cves")
-def get_filtered_cves():
-    vendor = request.args.get("vendor", "").lower()
-    product = request.args.get("product", "").lower()
-    domain = request.args.get("domain", "").lower()
-    keyword = request.args.get("keyword", "").lower()
+@app.route("/api/stats/cooccurrence")
+def get_keyword_pairs():
+    return jsonify(cooccurrence_counter.most_common(100))
 
-    filtered = []
-    for entry in cve_data:
-        if vendor and vendor not in entry["vendor"]:
-            continue
-        if product and product not in entry["product"]:
-            continue
-        if domain and not any(domain in d for d in entry["reference_domains"]):
-            continue
-        if keyword and keyword not in entry["description"].lower():
-            continue
-        filtered.append(entry)
+@app.route("/api/stats/vuln-types")
+def get_vuln_types():
+    return jsonify(vuln_type_counter.most_common())
 
-    return jsonify(filtered)
+@app.route("/api/stats/heatmap/vendors")
+def heatmap_vendors():
+    return jsonify(vendor_year_heatmap)
 
+@app.route("/api/stats/heatmap/domains")
+def heatmap_domains():
+    return jsonify(domain_year_heatmap)
 
-@app.route("/api/stats/summary")
-def get_summary():
-    return jsonify({
-        "total_cves": len(cve_data),
-        "unique_vendors": len(set(e["vendor"] for e in cve_data)),
-        "unique_products": len(set(e["product"] for e in cve_data)),
-        "unique_domains": len(reference_counter),
-    })
-
-
-@app.route("/api/stats/references")
-def reference_stats():
-    return jsonify(reference_counter.most_common())
-
-
-@app.route("/api/stats/submitters")
-def submitter_stats():
-    return jsonify(submitter_counter.most_common())
-
-
-@app.route("/api/stats/timeline")
-def get_timeline():
-    sorted_timeline = sorted(date_distribution.items())
-    return jsonify(sorted_timeline)
-
-
-@app.route("/api/vendors")
-def get_all_vendors():
-    vendors = sorted(set(e["vendor"] for e in cve_data))
-    return jsonify(vendors)
-
-
-@app.route("/api/products")
-def get_all_products():
-    products = sorted(set(e["product"] for e in cve_data))
-    return jsonify(products)
-
+@app.route("/api/stats/heatmap/submitters")
+def heatmap_submitters():
+    return jsonify(submitter_year_heatmap)
 
 if __name__ == "__main__":
     app.run(debug=True)
