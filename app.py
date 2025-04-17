@@ -18,12 +18,7 @@ reference_counter = Counter()
 submitter_counter = Counter()
 domain_to_cves = defaultdict(list)
 provider_to_cves = defaultdict(list)
-date_distribution = Counter()
-vendor_year_heatmap = defaultdict(lambda: defaultdict(int))
-domain_year_heatmap = defaultdict(lambda: defaultdict(int))
-submitter_year_heatmap = defaultdict(lambda: defaultdict(int))
 cooccurrence_counter = Counter()
-vuln_type_counter = Counter()
 
 def load_and_index_cves():
     if not os.path.exists(JSON_DIR):
@@ -79,32 +74,18 @@ def load_and_index_cves():
                 submitter_counter[p] += 1
                 provider_to_cves[p].append(cve_id)
 
-            # Date parsing
+            # Co-occurrence keyword counting
+            words = [w.lower() for w in description.split() if len(w) > 3]
+            for pair in itertools.combinations(set(words), 2):
+                cooccurrence_counter[tuple(sorted(pair))] += 1
+
             date_str = cna.get("datePublic", data.get("published", None))
             date_obj = None
             if date_str:
                 try:
                     date_obj = datetime.fromisoformat(date_str.replace("Z", ""))
-                    date_key = date_obj.strftime("%Y")
-                    date_distribution[date_key] += 1
-                    vendor_year_heatmap[vendor][date_key] += 1
-                    for domain in reference_domains:
-                        domain_year_heatmap[domain][date_key] += 1
-                    submitter_year_heatmap[assigner][date_key] += 1
                 except Exception as e:
                     print(f"⚠️ Failed to parse date for {cve_id}: {e}")
-
-            # Keyword co-occurrence
-            words = [w.lower() for w in description.split() if len(w) > 3]
-            for pair in itertools.combinations(set(words), 2):
-                cooccurrence_counter[tuple(sorted(pair))] += 1
-
-            # Vulnerability types
-            for pt in problem_types:
-                for desc in pt.get("descriptions", []):
-                    d = desc.get("description", "").lower()
-                    if d:
-                        vuln_type_counter[d] += 1
 
             cve_data.append({
                 "cve_id": cve_id,
@@ -129,25 +110,61 @@ load_and_index_cves()
 
 # ------------------ API ------------------
 
+@app.route("/api/cves")
+def get_filtered_cves():
+    vendor = request.args.get("vendor", "").lower()
+    domain = request.args.get("domain", "").lower()
+    assigner = request.args.get("assigner", "").lower()
+    keyword = request.args.get("keyword", "").lower()
+    year = request.args.get("year", "").lower()
+
+    results = []
+    for entry in cve_data:
+        if vendor and vendor not in entry["vendor"]:
+            continue
+        if domain and not any(domain in d for d in entry["reference_domains"]):
+            continue
+        if assigner and assigner != entry["assigner"]:
+            continue
+        if year and (not entry["datePublic"] or not entry["datePublic"].startswith(year)):
+            continue
+        if keyword and keyword not in entry["description"].lower():
+            continue
+        results.append(entry)
+
+    return jsonify(results)
+
+@app.route("/api/cves/<cve_id>")
+def get_cve(cve_id):
+    for entry in cve_data:
+        if entry["cve_id"].lower() == cve_id.lower():
+            return jsonify(entry)
+    return jsonify({"error": "CVE not found"}), 404
+
+@app.route("/api/stats/top-submitters")
+def get_top_submitters():
+    return jsonify(submitter_counter.most_common(50))
+
+@app.route("/api/stats/top-domains")
+def get_top_domains():
+    return jsonify(reference_counter.most_common(50))
+
+@app.route("/api/stats/cooccurrence/search")
+def search_cooccurrences():
+    word = request.args.get("word", "").lower()
+    results = {
+        f"{a}, {b}": count for (a, b), count in cooccurrence_counter.items()
+        if word in (a, b)
+    }
+    sorted_results = sorted(results.items(), key=lambda x: -x[1])
+    return jsonify(sorted_results[:50])
+
 @app.route("/api/stats/cooccurrence")
-def get_keyword_pairs():
-    return jsonify(cooccurrence_counter.most_common(100))
-
-@app.route("/api/stats/vuln-types")
-def get_vuln_types():
-    return jsonify(vuln_type_counter.most_common())
-
-@app.route("/api/stats/heatmap/vendors")
-def heatmap_vendors():
-    return jsonify(vendor_year_heatmap)
-
-@app.route("/api/stats/heatmap/domains")
-def heatmap_domains():
-    return jsonify(domain_year_heatmap)
-
-@app.route("/api/stats/heatmap/submitters")
-def heatmap_submitters():
-    return jsonify(submitter_year_heatmap)
+def get_top_cooccurrences():
+    formatted = {
+        f"{a}, {b}": count for (a, b), count in cooccurrence_counter.most_common(100)
+    }
+    return jsonify(formatted)
 
 if __name__ == "__main__":
     app.run(debug=True)
