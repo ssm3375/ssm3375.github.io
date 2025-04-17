@@ -93,11 +93,6 @@ def load_and_index_cves():
 load_and_index_cves()
 
 
-@app.route("/")
-def index():
-    return render_template("index.html")
-
-
 @app.route("/api/cves")
 def get_filtered_cves():
     vendor = request.args.get("vendor", "").lower()
@@ -131,9 +126,6 @@ def submitter_stats():
     return jsonify(submitter_counter.most_common())
 
 
-@app.route("/includes/<name>")
-def include_html(name):
-    return render_template(f"includes/{name}")
 
 
 if __name__ == "__main__":
