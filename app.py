@@ -12,14 +12,13 @@ CORS(app)
 
 JSON_DIR = "hardware_cves"
 
-# Global storage
+# Global in-memory storage
 cve_data = []
 reference_counter = Counter()
 submitter_counter = Counter()
 domain_to_cves = defaultdict(list)
 provider_to_cves = defaultdict(list)
 cooccurrence_counter = Counter()
-vendor_product_map = defaultdict(set)  # ✅ for vendor→product filtering
 
 def load_and_index_cves():
     if not os.path.exists(JSON_DIR):
@@ -40,11 +39,8 @@ def load_and_index_cves():
             cna = data.get("containers", {}).get("cna", {})
             affected = cna.get("affected", [{}])[0]
 
-            vendor = affected.get("vendor", "n/a").strip().lower()
-            product = affected.get("product", "n/a").strip().lower()
-
-            vendor_product_map[vendor].add(product)  # ✅ track vendor→product
-
+            vendor = affected.get("vendor", "n/a").lower()
+            product = affected.get("product", "n/a").lower()
             description = cna.get("descriptions", [{}])[0].get("value", "No description")
             references = cna.get("references", [])
             problem_types = cna.get("problemTypes", [])
@@ -58,19 +54,19 @@ def load_and_index_cves():
                     reference_counter[domain] += 1
                     domain_to_cves[domain].append(cve_id)
 
-            assigner = data.get("cveMetadata", {}).get("assignerShortName", "n/a").strip().lower()
+            assigner = data.get("cveMetadata", {}).get("assignerShortName", "n/a").lower()
 
             providers = set()
             for container in data.get("containers", {}).values():
                 if isinstance(container, dict):
                     p = container.get("providerMetadata", {}).get("shortName", "")
                     if p:
-                        providers.add(p.strip().lower())
+                        providers.add(p.lower())
                 elif isinstance(container, list):
                     for item in container:
                         p = item.get("providerMetadata", {}).get("shortName", "")
                         if p:
-                            providers.add(p.strip().lower())
+                            providers.add(p.lower())
 
             submitter_counter[assigner] += 1
             provider_to_cves[assigner].append(cve_id)
@@ -78,7 +74,7 @@ def load_and_index_cves():
                 submitter_counter[p] += 1
                 provider_to_cves[p].append(cve_id)
 
-            # Keyword co-occurrence
+            # Co-occurrence keyword counting
             words = [w.lower() for w in description.split() if len(w) > 3]
             for pair in itertools.combinations(set(words), 2):
                 cooccurrence_counter[tuple(sorted(pair))] += 1
@@ -109,29 +105,20 @@ def load_and_index_cves():
             print(f"⚠️ Error reading {file}: {e}")
 
     print(f"\n✅ Total CVEs Loaded: {len(cve_data)}")
-    print(f"📊 Vendors: {len(vendor_product_map)}")
 
+load_and_index_cves()
 
-# ---------- API Routes ----------
-
-@app.route("/api/vendors-products")
-def get_vendors_and_products():
-    result = {v: sorted(list(p)) for v, p in vendor_product_map.items()}
-    print(f"🧾 /api/vendors-products returned {len(result)} vendors")
-    return jsonify(result)
-
+# ------------------ API ------------------
 
 @app.route("/api/cves")
 def get_filtered_cves():
-    vendor = request.args.get("vendor", "").strip().lower()
-    product = request.args.get("product", "").strip().lower()
-    domain = request.args.get("domain", "").strip().lower()
-    keyword = request.args.get("keyword", "").strip().lower()
-    year = request.args.get("year", "").strip().lower()
-    submitter = request.args.get("submitter", "").strip().lower()
-    reference = request.args.get("reference", "").strip().lower()
-
-    print("🔎 Filters:", vendor, product, submitter, reference, keyword)
+    vendor = request.args.get("vendor", "").lower()
+    product = request.args.get("product", "").lower()
+    domain = request.args.get("domain", "").lower()
+    keyword = request.args.get("keyword", "").lower()
+    year = request.args.get("year", "").lower()
+    submitter = request.args.get("submitter", "").lower()
+    reference = request.args.get("reference", "").lower()
 
     results = []
     for entry in cve_data:
@@ -154,28 +141,20 @@ def get_filtered_cves():
     return jsonify(results)
 
 
+@app.route("/api/cves/<cve_id>")
+def get_cve(cve_id):
+    for entry in cve_data:
+        if entry["cve_id"].lower() == cve_id.lower():
+            return jsonify(entry)
+    return jsonify({"error": "CVE not found"}), 404
+
 @app.route("/api/stats/top-submitters")
 def get_top_submitters():
     return jsonify(submitter_counter.most_common(50))
 
-
 @app.route("/api/stats/top-domains")
 def get_top_domains():
     return jsonify(reference_counter.most_common(50))
-
-
-@app.route("/api/stats/references")
-def get_all_references():
-    return jsonify([[k] for k in reference_counter.keys()])
-
-
-@app.route("/api/stats/cooccurrence")
-def get_top_cooccurrences():
-    formatted = {
-        f"{a}, {b}": count for (a, b), count in cooccurrence_counter.most_common(100)
-    }
-    return jsonify(formatted)
-
 
 @app.route("/api/stats/cooccurrence/search")
 def search_cooccurrences():
@@ -187,7 +166,12 @@ def search_cooccurrences():
     sorted_results = sorted(results.items(), key=lambda x: -x[1])
     return jsonify(sorted_results[:50])
 
+@app.route("/api/stats/cooccurrence")
+def get_top_cooccurrences():
+    formatted = {
+        f"{a}, {b}": count for (a, b), count in cooccurrence_counter.most_common(100)
+    }
+    return jsonify(formatted)
 
 if __name__ == "__main__":
-    load_and_index_cves()
     app.run(debug=True)
