@@ -113,18 +113,24 @@ load_and_index_cves()
 @app.route("/api/cves")
 def get_filtered_cves():
     vendor = request.args.get("vendor", "").lower()
+    product = request.args.get("product", "").lower()
     domain = request.args.get("domain", "").lower()
-    assigner = request.args.get("assigner", "").lower()
     keyword = request.args.get("keyword", "").lower()
     year = request.args.get("year", "").lower()
+    submitter = request.args.get("submitter", "").lower()
+    reference = request.args.get("reference", "").lower()
 
     results = []
     for entry in cve_data:
-        if vendor and vendor not in entry["vendor"]:
+        if vendor and vendor != entry["vendor"]:
+            continue
+        if product and product != entry["product"]:
             continue
         if domain and not any(domain in d for d in entry["reference_domains"]):
             continue
-        if assigner and assigner != entry["assigner"]:
+        if reference and not any(reference in d for d in entry["reference_domains"]):
+            continue
+        if submitter and submitter not in ([entry["assigner"]] + entry["providers"]):
             continue
         if year and (not entry["datePublic"] or not entry["datePublic"].startswith(year)):
             continue
@@ -133,6 +139,7 @@ def get_filtered_cves():
         results.append(entry)
 
     return jsonify(results)
+
 
 @app.route("/api/cves/<cve_id>")
 def get_cve(cve_id):
