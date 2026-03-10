@@ -410,8 +410,8 @@ code {
 
 /* Publication Styling */
 .publication-item {
-  margin-bottom: 2rem;
-  padding-bottom: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -420,45 +420,22 @@ code {
 }
 
 .publication-title {
-  font-size: 1.2rem;
+  font-size: 1.05rem;
   font-weight: 600;
   color: var(--text-color);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
 }
 
 .publication-authors {
   color: var(--text-secondary);
   margin-bottom: 0.3rem;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 .publication-venue {
   font-style: italic;
   color: var(--text-muted);
-  margin-bottom: 0.5rem;
-  font-size: 0.9rem;
-}
-
-.publication-links {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.publication-links a {
-  padding: 0.3rem 0.8rem;
-  background-color: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 5px;
   font-size: 0.85rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.publication-links a:hover {
-  background-color: var(--accent-color);
-  color: #ffffff;
-  border-color: var(--accent-color);
 }
 
 /* Experience Items */
