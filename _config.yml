@@ -1,0 +1,56 @@
+# Site settings
+title: Stephen Muttathil
+email: stephen7929@tamu.edu
+description: >-
+  Ph.D. student in Computer Engineering at Texas A&M University, specializing in 
+  hardware security, vulnerability detection, and automated verification techniques 
+  for modern processors and System-on-Chips.
+
+baseurl: ""
+url: "https://ssm3375.github.io"
+
+# Author information
+author:
+  name: Stephen Muttathil
+  email: stephen7929@tamu.edu
+  phone: 346-754-0957
+  affiliation: Texas A&M University
+  position: Ph.D. Student in Computer Engineering
+
+# Social media / academic profiles
+github_username: ssm3375
+linkedin_username: stephen-muttathil-3bb8141a3
+scholar_url: "#" # Update with your Google Scholar URL when available
+
+# Build settings
+markdown: kramdown
+theme: null
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+
+# Exclude from processing
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+  - .sass-cache/
+  - .jekyll-cache/
+
+# Collections and defaults
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: "default"
+
+# Permalink structure
+permalink: pretty
+
+# Sass settings
+sass:
+  style: compressed
