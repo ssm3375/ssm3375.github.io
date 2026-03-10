@@ -268,61 +268,69 @@ code {
    ============================================ */
 
 .hero {
-  padding: 150px 2rem 100px;
-  text-align: center;
+  padding: 120px 2rem 80px;
   background: linear-gradient(135deg, var(--bg-color) 0%, var(--card-bg) 100%);
 }
 
 .hero-content {
-  max-width: 800px;
+  max-width: 1000px;
   margin: 0 auto;
 }
 
-.profile-photo-container {
-  margin-bottom: 2rem;
+.hero-layout {
+  display: flex;
+  gap: 3rem;
+  align-items: center;
+}
+
+.hero-photo {
+  flex-shrink: 0;
 }
 
 .profile-photo {
-  width: 180px;
-  height: 180px;
-  border-radius: 50%;
+  width: 200px;
+  height: 250px;
   object-fit: cover;
-  border: 4px solid var(--accent-color);
+  border: 3px solid var(--accent-color);
   box-shadow: 0 8px 20px var(--shadow-lg);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .profile-photo:hover {
-  transform: scale(1.05);
+  transform: scale(1.02);
   box-shadow: 0 12px 30px var(--shadow-lg);
 }
 
+.hero-info {
+  flex: 1;
+  text-align: left;
+}
+
 .hero-title {
-  font-size: 3rem;
+  font-size: 2.5rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
   color: var(--text-color);
 }
 
 .hero-subtitle {
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   color: var(--text-secondary);
   margin-bottom: 0.3rem;
 }
 
 .hero-affiliation {
-  font-size: 1.1rem;
+  font-size: 1rem;
   color: var(--text-muted);
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 /* Social Links */
 .social-links {
   display: flex;
-  justify-content: center;
   gap: 1rem;
   flex-wrap: wrap;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .social-link {
@@ -587,8 +595,17 @@ code {
     padding: 120px 1.5rem 80px;
   }
 
+  .hero-layout {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .hero-info {
+    text-align: center;
+  }
+
   .hero-title {
-    font-size: 2.2rem;
+    font-size: 2rem;
   }
 
   .hero-subtitle {
@@ -596,8 +613,12 @@ code {
   }
 
   .profile-photo {
-    width: 150px;
-    height: 150px;
+    width: 180px;
+    height: 225px;
+  }
+
+  .social-links {
+    justify-content: center;
   }
 
   .content {
@@ -661,8 +682,8 @@ code {
   }
 
   .profile-photo {
-    width: 120px;
-    height: 120px;
+    width: 150px;
+    height: 188px;
   }
 
   .social-links {
